@@ -2,7 +2,7 @@ class Filme:
     def __init__(self, codigo, titulo, genero, ano):
         self._codigo = codigo
         self._titulo = titulo
-        self.__genero = genero
+        self._genero = genero
         self._ano = ano
         self._disponivel = True
 
@@ -13,12 +13,12 @@ class Filme:
         return self._titulo
 
     def get_genero(self):
-        return self.__genero
+        return self._genero
 
     def get_ano(self):
         return self._ano
 
-    def get_disponivel(self):
+    def esta_disponivel(self):
         return self._disponivel
 
     def alugar(self):
@@ -46,12 +46,13 @@ class Cliente:
     def get_telefone(self):
         return self._telefone
 
-class Locacao:
+
+class Aluguel:
     def __init__(self, cliente, filme, data):
         self._cliente = cliente
         self._filme = filme
         self._data = data
-        self._ativa = True
+        self._ativo = True
 
     def get_cliente(self):
         return self._cliente
@@ -62,10 +63,10 @@ class Locacao:
     def get_data(self):
         return self._data
 
-    def get_ativa(self):
-        return self._ativa
+    def esta_ativo(self):
+        return self._ativo
 
     def finalizar(self):
-        if self._ativa:
-            self._ativa = False
+        if self._ativo:
+            self._ativo = False
             self._filme.devolver()
