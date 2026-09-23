@@ -21,10 +21,20 @@ class Filme:
     def esta_disponivel(self):
         return self._disponivel
 
+    def set_titulo(self, titulo):
+        self._titulo = titulo
+
+    def set_genero(self, genero):
+        self._genero = genero
+
+    def set_ano(self, ano):
+        self._ano = ano
+
     def alugar(self):
         if self._disponivel:
             self._disponivel = False
             return True
+
         return False
 
     def devolver(self):

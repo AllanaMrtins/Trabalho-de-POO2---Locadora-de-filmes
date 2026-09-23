@@ -1,14 +1,17 @@
-from PySide6.QtWidgets import(
-    QDialog, QVBoxLayout, QFormLayout, QLineEdit,
-    QSpinBox, QComboBox, QPushButton, QMessageBox
+from PySide6.QtWidgets import (
+    QDialog,QVBoxLayout,QFormLayout,QLineEdit,QSpinBox,
+    QComboBox,QPushButton,QMessageBox
 )
+
 
 class DialogoFilme(QDialog):
     def __init__(self, filme=None, parent=None):
         super().__init__(parent)
 
         self._filme = filme
-        self.setWindowTitle("Cadastro de Filmes")
+        self._dados_filme = None
+
+        self.setWindowTitle("Cadastro de Filme")
 
         layout = QVBoxLayout()
         formulario = QFormLayout()
@@ -17,9 +20,15 @@ class DialogoFilme(QDialog):
         self.campo_titulo = QLineEdit()
 
         self.campo_genero = QComboBox()
+
         self.campo_genero.addItems([
-            "Ação", "Comédia", "Terror", "Romance", 
-            "Ficção", "Animação"
+            "Ação",
+            "Comédia",
+            "Drama",
+            "Terror",
+            "Romance",
+            "Ficção",
+            "Animação"
         ])
 
         self.campo_ano = QSpinBox()
@@ -27,12 +36,13 @@ class DialogoFilme(QDialog):
         self.campo_ano.setMaximum(2100)
         self.campo_ano.setValue(2026)
 
-        formulario.addRow("Código: ", self.campo_codigo)
-        formulario.addRow("Titulo: ", self.campo_titulo)
-        formulario.addRow("Gênero: ", self.campo_genero)
-        formulario.addRow("Ano: ", self.campo_ano)
+        formulario.addRow("Código:", self.campo_codigo)
+        formulario.addRow("Título:", self.campo_titulo)
+        formulario.addRow("Gênero:", self.campo_genero)
+        formulario.addRow("Ano:", self.campo_ano)
 
         layout.addLayout(formulario)
+
         self.botao_salvar = QPushButton("Salvar")
         self.botao_cancelar = QPushButton("Cancelar")
 
@@ -48,8 +58,13 @@ class DialogoFilme(QDialog):
             self.carregar_filme()
 
     def carregar_filme(self):
-        self.campo_codigo.setText(str(self._filme.get_codigo))
-        self.campo_titulo.setText(self._filme.get_titulo())
+        self.campo_codigo.setText(
+            str(self._filme.get_codigo())
+        )
+
+        self.campo_titulo.setText(
+            self._filme.get_titulo()
+        )
 
         indice = self.campo_genero.findText(
             self._filme.get_genero()
@@ -58,8 +73,9 @@ class DialogoFilme(QDialog):
         if indice >= 0:
             self.campo_genero.setCurrentIndex(indice)
 
-        self.campo_ano.setValue(self._filme.get_ano())
-
+        self.campo_ano.setValue(
+            self._filme.get_ano()
+        )
 
     def salvar(self):
         codigo = self.campo_codigo.text().strip()
@@ -69,7 +85,9 @@ class DialogoFilme(QDialog):
 
         if codigo == "" or titulo == "":
             QMessageBox.warning(
-                self, "Atenção", "Preencha todos os campos."
+                self,
+                "Atenção",
+                "Preencha todos os campos."
             )
             return
 
@@ -79,7 +97,8 @@ class DialogoFilme(QDialog):
             "genero": genero,
             "ano": ano
         }
+
         self.accept()
 
-    def get_dados_filmes(self):
+    def get_dados_filme(self):
         return self._dados_filme
