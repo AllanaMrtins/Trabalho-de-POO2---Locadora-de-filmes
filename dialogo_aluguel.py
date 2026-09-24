@@ -1,75 +1,62 @@
-from PySide6.QtWidgets import(
-    QDialog, QVBoxLayout, QFormLayout, QComboBox, QSpinBox,
-    QLabel, QPushButton, QMessageBox)
+from PySide6.QtWidgets import (
+    QDialog,
+    QVBoxLayout,
+    QFormLayout,
+    QLabel,
+    QLineEdit,
+    QSpinBox,
+    QDialogButtonBox
+)
+
 
 class DialogoAluguel(QDialog):
-    def __init__(self, clientes, valor_diaria, parent=None):
+
+    def __init__(self, filme, parent=None):
         super().__init__(parent)
 
-        self._clientes = clientes 
-        self._valor_diaria = valor_diaria
-        self._cliente_selecionado = None
-        self._dias = 0
-        self._valor_total = 0
+        self.filme = filme
 
-        self.setWindowTitle("Novo Aluguel")
-        self.setMinimumWidth(350)
+        self.setWindowTitle("Alugar Filme")
+        self.resize(400, 300)
 
-        layout = QVBoxLayout()
+        layout_principal = QVBoxLayout(self)
+
+        titulo = QLabel("Dados do aluguel")
+        titulo.setStyleSheet("font-size: 20px; font-weight: bold;")
+
+        layout_principal.addWidget(titulo)
+
         formulario = QFormLayout()
-        self.combo_cliente = QComboBox()
 
-        for cliente in cliente:
-            self.combo_cliente.addItem(
-                cliente.get_nome(),
-                cliente
-            )
+        self.campo_cliente = QLineEdit()
+        self.campo_cliente.setPlaceholderText("Digite o nome do cliente")
 
-        self.spin_dias = QSpinBox()
-        self.spin_dias.setMinimum(1)
-        self.spin_dias.setMaximum(30)
-        self.label_valor = QLabel("R$ 0, 00")
+        self.campo_dias = QSpinBox()
+        self.campo_dias.setRange(1, 30)
+        self.campo_dias.setValue(1)
 
-        formulario.addRow("Cleiente: ", self.combo_cliente)
-        formulario.addRoW("Dias: ", self.spin_dias)
-        formulario.addRow("Valor: ", self.label_valor)
+        formulario.addRow("Filme:", QLabel(self.filme.titulo))
+        formulario.addRow("Cliente:", self.campo_cliente)
+        formulario.addRow("Dias:", self.campo_dias)
 
-        layout.addLayout(formulario)
-        self.botao_alugar = QPushButton("Confirmar aluguel")
-        self.botao_cancelar = QPushButton("Cancelar")
+        layout_principal.addLayout(formulario)
+        layout_principal.addStretch()
 
-        layout.addWidget(self.botao_alugar)
-        layout.addWidget(self.botao_cancelar)
-        self.setLayout(layout)
+        botoes = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
 
-        self.spin_dias.valueChanged.connect(self.calcular_valor)
-        self.botao_alugar.clicked.connect(self.confirmar)
-        self.botao_cancelar.clicked.connect(self.reject)
-        self.calular_valor()
+        botoes.accepted.connect(self.validar)
+        botoes.rejected.connect(self.reject)
 
-    def calcular_valor(self):
-        self._dias = self.spin_dias.value()
-        self._valor_total = self._dias * self._valor_diaria
+        layout_principal.addWidget(botoes)
 
-        self.label_valor.setText(
-            f"R$ {self._valor_total:.2f}"
-        )
+    def validar(self):
+        cliente = self.campo_cliente.text().strip()
 
-    def confirmar(self):
-        if self.combo_cliente.currentIndex() == -1:
-            QMessageBox.warning(
-                self, "Atenção", "Selecione um cliente"
-            )
+        if cliente == "":
+            self.campo_cliente.setFocus()
             return
 
-        self._cliente_selecionado = self.combo_cliente.currentData()
         self.accept()
 
-    def get_cliente(self):
-        return self._cliente_selecionado
-
-    def get_dias(self):
-        return self._dias
-
-    def get_valor_total(self):
-        return self._valor_total
+    def obter_dados(self):
+        return self.campo_cliente.text().strip(), self.campo_dias.value()
