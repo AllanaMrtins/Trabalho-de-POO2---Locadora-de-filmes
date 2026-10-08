@@ -1,3 +1,5 @@
+import json
+
 from PySide6.QtWidgets import (
     QMainWindow,
     QWidget,
@@ -24,6 +26,7 @@ class JanelaPrincipal(QMainWindow):
         super().__init__()
 
         self.filmes = []
+        self.arquivo = "filmes.json"
 
         self.setWindowTitle("Locadora de Filmes")
         self.setMinimumSize(850, 550)
@@ -118,12 +121,36 @@ class JanelaPrincipal(QMainWindow):
         barra = self.addToolBar("Barra de ferramentas")
 
     def carregar_filmes(self):
-        self.filmes.append(Filme("Interestelar", "Ficção", 2014))
-        self.filmes.append(Filme("Toy Story", "Animação", 1995))
-        self.filmes.append(Filme("O Poderoso Chefão", "Drama", 1972))
-        self.filmes.append(Filme("Homem-Aranha", "Ação", 2002))
+        try:
+            with open(self.arquivo, "r", encoding="utf-8") as arquivo:
+                dados = json.load(arquivo)
+
+            self.filmes = []
+
+            for dados_filme in dados:
+                filme = Filme.de_dicionario(dados_filme)
+                self.filmes.append(filme)
+
+        except FileNotFoundError:
+            self.filmes = []
+
+            self.filmes.append(Filme("Interestelar", "Ficção", 2014))
+            self.filmes.append(Filme("Toy Story", "Animação", 1995))
+            self.filmes.append(Filme("O Poderoso Chefão", "Drama", 1972))
+            self.filmes.append(Filme("Homem-Aranha", "Ação", 2002))
+
+            self.salvar_filmes()
 
         self.atualizar_lista()
+
+    def salvar_filmes(self):
+        dados = []
+
+        for filme in self.filmes:
+            dados.append(filme.para_dicionario())
+
+        with open(self.arquivo, "w", encoding="utf-8") as arquivo:
+            json.dump(dados, arquivo, ensure_ascii=False, indent=4)
 
     def atualizar_lista(self):
         self.lista_filmes.clear()
@@ -131,7 +158,9 @@ class JanelaPrincipal(QMainWindow):
         for filme in self.filmes:
             self.lista_filmes.addItem(str(filme))
 
-        self.statusBar().showMessage(f"{len(self.filmes)} filme(s) cadastrado(s).")
+        self.statusBar().showMessage(
+            f"{len(self.filmes)} filme(s) cadastrado(s)."
+        )
 
     def adicionar_filme(self):
         dialogo = DialogoFilme(self)
@@ -143,9 +172,14 @@ class JanelaPrincipal(QMainWindow):
 
             self.filmes.append(filme)
 
+            self.salvar_filmes()
             self.atualizar_lista()
 
-            QMessageBox.information(self, "Sucesso", "Filme adicionado com sucesso.")
+            QMessageBox.information(
+                self,
+                "Sucesso",
+                "Filme adicionado com sucesso."
+            )
 
     def obter_filme_selecionado(self):
         indice = self.lista_filmes.currentRow()
@@ -165,11 +199,19 @@ class JanelaPrincipal(QMainWindow):
         filme = self.obter_filme_selecionado()
 
         if filme is None:
-            QMessageBox.warning(self, "Aviso", "Selecione um filme.")
+            QMessageBox.warning(
+                self,
+                "Aviso",
+                "Selecione um filme."
+            )
             return
 
         if not filme.disponivel:
-            QMessageBox.warning(self, "Aviso", "Este filme já está alugado.")
+            QMessageBox.warning(
+                self,
+                "Aviso",
+                "Este filme já está alugado."
+            )
             return
 
         dialogo = DialogoAluguel(filme, self)
@@ -181,6 +223,7 @@ class JanelaPrincipal(QMainWindow):
             filme.cliente = cliente
             filme.dias = dias
 
+            self.salvar_filmes()
             self.atualizar_lista()
 
             QMessageBox.information(
@@ -196,11 +239,19 @@ class JanelaPrincipal(QMainWindow):
         filme = self.obter_filme_selecionado()
 
         if filme is None:
-            QMessageBox.warning(self, "Aviso", "Selecione um filme.")
+            QMessageBox.warning(
+                self,
+                "Aviso",
+                "Selecione um filme."
+            )
             return
 
         if filme.disponivel:
-            QMessageBox.information(self, "Aviso", "Este filme já está disponível.")
+            QMessageBox.information(
+                self,
+                "Aviso",
+                "Este filme já está disponível."
+            )
             return
 
         resposta = QMessageBox.question(
@@ -214,6 +265,7 @@ class JanelaPrincipal(QMainWindow):
             filme.cliente = ""
             filme.dias = 0
 
+            self.salvar_filmes()
             self.atualizar_lista()
 
             QMessageBox.information(
@@ -226,7 +278,11 @@ class JanelaPrincipal(QMainWindow):
         filme = self.obter_filme_selecionado()
 
         if filme is None:
-            QMessageBox.warning(self, "Aviso", "Selecione um filme.")
+            QMessageBox.warning(
+                self,
+                "Aviso",
+                "Selecione um filme."
+            )
             return
 
         resposta = QMessageBox.question(
@@ -237,6 +293,8 @@ class JanelaPrincipal(QMainWindow):
 
         if resposta == QMessageBox.Yes:
             self.filmes.remove(filme)
+
+            self.salvar_filmes()
             self.atualizar_lista()
 
             QMessageBox.information(
