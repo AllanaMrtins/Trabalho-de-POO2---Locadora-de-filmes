@@ -1,1 +1,31 @@
+CHANGELOG - Locadora de Filmes
+Trabalho 02 - POO2 - UFPI
 
+Grupo: Allana Camily de Sousa Martins, Gabriel dos Santos Silva,
+Janiele de Jesus Barbosa
+
+
+Versão 2.0.0 - Parte 1: arquivos (entrega parcial 1, 09/10/2026)
+
+- Os filmes agora são salvos no arquivo filmes.json.
+- Ao abrir o programa, os filmes são lidos do arquivo.
+- Ao adicionar, alugar, devolver ou remover um filme, o arquivo é
+  atualizado.
+- Criados os métodos para_dicionario e de_dicionario na classe Filme.
+- Se o arquivo não existe, ele é criado com 4 filmes de exemplo.
+- Os dados não se perdem mais ao fechar o programa.
+
+Versão 2.1.0 - Parte 2: threads (entrega parcial 2, 16/10/2026)
+
+Ainda não feita. Será feita depois da parte 1.
+
+- Usar threads para executar partes do programa em paralelo, como
+  carregar e salvar o arquivo sem travar a tela.
+
+
+Versão 1.0.0 - Trabalho 1
+
+- Interface gráfica com PySide6.
+- Cadastrar, buscar, alugar, devolver e remover filmes.
+- Menus, janela "Sobre" e mensagens de confirmação.
+- Os dados ficavam só na memória.
