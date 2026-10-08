@@ -14,3 +14,27 @@ class Filme:
             status = "Alugado"
 
         return f"{self.titulo} | {self.genero} | {self.ano} | {status}"
+
+    def para_dicionario(self):
+        return {
+            "titulo": self.titulo,
+            "genero": self.genero,
+            "ano": self.ano,
+            "disponivel": self.disponivel,
+            "cliente": self.cliente,
+            "dias": self.dias
+        }
+
+    @classmethod
+    def de_dicionario(cls, dados):
+        filme = cls(
+            dados["titulo"],
+            dados["genero"],
+            dados["ano"]
+        )
+
+        filme.disponivel = dados["disponivel"]
+        filme.cliente = dados["cliente"]
+        filme.dias = dados["dias"]
+
+        return filme
