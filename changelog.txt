@@ -5,6 +5,28 @@ Grupo: Allana Camily de Sousa Martins, Gabriel dos Santos Silva,
 Janiele de Jesus Barbosa
 
 
+Versão 2.1.0 - Parte 2: threads (entrega parcial 2, 16/10/2026)
+
+- Criado o arquivo tarefas.py com a classe GerenciadorArquivos, que
+  usa QThread para ler e gravar o filmes.json em uma thread separada.
+- As operações de arquivo (carregar, salvar e encerrar) entram em uma
+  fila (Queue) e são executadas uma de cada vez, na ordem em que foram
+  pedidas.
+- A thread avisa a janela principal quando termina cada operação,
+  usando um Signal.
+- Os métodos carregar_filmes e salvar_filmes da janela principal não
+  leem nem gravam mais o arquivo diretamente: eles só enviam o pedido
+  para a thread.
+- A tela não trava mais durante a leitura e a gravação do arquivo.
+- Adicionada a variável carregamento_concluido, que impede alugar,
+  devolver, adicionar ou remover filmes antes de o carregamento
+  inicial terminar.
+- Ao fechar o programa, a janela manda a thread encerrar e espera ela
+  terminar, para não perder gravações pendentes.
+- Removido o import json da janela principal, pois o arquivo agora é
+  tratado só pela thread.
+
+
 Versão 2.0.0 - Parte 1: arquivos (entrega parcial 1, 09/10/2026)
 
 - Os filmes agora são salvos no arquivo filmes.json.
@@ -14,13 +36,6 @@ Versão 2.0.0 - Parte 1: arquivos (entrega parcial 1, 09/10/2026)
 - Criados os métodos para_dicionario e de_dicionario na classe Filme.
 - Se o arquivo não existe, ele é criado com 4 filmes de exemplo.
 - Os dados não se perdem mais ao fechar o programa.
-
-Versão 2.1.0 - Parte 2: threads (entrega parcial 2, 16/10/2026)
-
-Ainda não feita. Será feita depois da parte 1.
-
-- Usar threads para executar partes do programa em paralelo, como
-  carregar e salvar o arquivo sem travar a tela.
 
 
 Versão 1.0.0 - Trabalho 1
