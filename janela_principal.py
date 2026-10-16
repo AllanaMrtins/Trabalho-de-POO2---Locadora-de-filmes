@@ -1,4 +1,3 @@
-import json
 
 from PySide6.QtWidgets import (
     QMainWindow,
@@ -18,6 +17,7 @@ from modelos import Filme
 from dialogo_filme import DialogoFilme
 from dialogo_aluguel import DialogoAluguel
 from sobre import JanelaSobre
+from tarefas import GerenciadorArquivos
 
 
 class JanelaPrincipal(QMainWindow):
@@ -27,6 +27,7 @@ class JanelaPrincipal(QMainWindow):
 
         self.filmes = []
         self.arquivo = "filmes.json"
+        self.carregamento_concluido = False
 
         self.setWindowTitle("Locadora de Filmes")
         self.setMinimumSize(850, 550)
@@ -34,7 +35,15 @@ class JanelaPrincipal(QMainWindow):
         self.criar_interface()
         self.criar_menu()
         self.criar_barra_ferramentas()
-        self.carregar_filmes()
+
+        self.tarefas_arquivo = GerenciadorArquivos()
+        self.tarefas_arquivo.resultado.connect(
+            self.tratar_resultado_arquivo
+        )
+        self.tarefas_arquivo.start()
+
+        self.statusBar().showMessage("Carregando filmes...")
+        self.tarefas_arquivo.carregar(self.arquivo)
 
     def criar_interface(self):
         widget_central = QWidget()
@@ -46,11 +55,14 @@ class JanelaPrincipal(QMainWindow):
         subtitulo = QLabel("Gerencie os filmes disponíveis na locadora.")
 
         self.campo_busca = QLineEdit()
-        self.campo_busca.setPlaceholderText("Buscar filme pelo título...")
+        self.campo_busca.setPlaceholderText(
+            "Buscar filme pelo título..."
+        )
 
         self.lista_filmes = QListWidget()
-
-        self.lista_filmes.itemDoubleClicked.connect(self.alugar_filme)
+        self.lista_filmes.itemDoubleClicked.connect(
+            self.alugar_filme
+        )
 
         botoes = QHBoxLayout()
 
@@ -78,7 +90,6 @@ class JanelaPrincipal(QMainWindow):
         layout_principal.addLayout(botoes)
 
         widget_central.setLayout(layout_principal)
-
         self.setCentralWidget(widget_central)
 
         self.statusBar().showMessage("Sistema pronto.")
@@ -118,30 +129,38 @@ class JanelaPrincipal(QMainWindow):
         menu_ajuda.addAction(acao_sobre)
 
     def criar_barra_ferramentas(self):
-        barra = self.addToolBar("Barra de ferramentas")
+        self.addToolBar("Barra de ferramentas")
 
-    def carregar_filmes(self):
-        try:
-            with open(self.arquivo, "r", encoding="utf-8") as arquivo:
-                dados = json.load(arquivo)
+    def carregar_filmes(self, dados):
+        self.filmes = []
 
-            self.filmes = []
+        if dados is None:
+            self.filmes.append(
+                Filme("Interestelar", "Ficção", 2014)
+            )
+            self.filmes.append(
+                Filme("Toy Story", "Animação", 1995)
+            )
+            self.filmes.append(
+                Filme("O Poderoso Chefão", "Drama", 1972)
+            )
+            self.filmes.append(
+                Filme("Homem-Aranha", "Ação", 2002)
+            )
 
+            self.salvar_filmes()
+
+        else:
             for dados_filme in dados:
                 filme = Filme.de_dicionario(dados_filme)
                 self.filmes.append(filme)
 
-        except FileNotFoundError:
-            self.filmes = []
-
-            self.filmes.append(Filme("Interestelar", "Ficção", 2014))
-            self.filmes.append(Filme("Toy Story", "Animação", 1995))
-            self.filmes.append(Filme("O Poderoso Chefão", "Drama", 1972))
-            self.filmes.append(Filme("Homem-Aranha", "Ação", 2002))
-
-            self.salvar_filmes()
-
+        self.carregamento_concluido = True
         self.atualizar_lista()
+
+        self.statusBar().showMessage(
+            "Filmes carregados com sucesso."
+        )
 
     def salvar_filmes(self):
         dados = []
@@ -149,8 +168,33 @@ class JanelaPrincipal(QMainWindow):
         for filme in self.filmes:
             dados.append(filme.para_dicionario())
 
-        with open(self.arquivo, "w", encoding="utf-8") as arquivo:
-            json.dump(dados, arquivo, ensure_ascii=False, indent=4)
+        self.tarefas_arquivo.salvar(self.arquivo, dados)
+
+        self.statusBar().showMessage(
+            "Salvando alterações..."
+        )
+
+    def tratar_resultado_arquivo(self, operacao, dados, erro):
+        if erro:
+            self.statusBar().showMessage(
+                "Erro ao acessar o arquivo."
+            )
+
+            QMessageBox.warning(
+                self,
+                "Erro no arquivo",
+                "Não foi possível concluir a operação.\n" + erro
+            )
+            return
+
+        if operacao == "carregar":
+            self.carregar_filmes(dados)
+
+        elif operacao == "salvar":
+            self.statusBar().showMessage(
+                "Alterações salvas.",
+                3000
+            )
 
     def atualizar_lista(self):
         self.lista_filmes.clear()
@@ -163,13 +207,15 @@ class JanelaPrincipal(QMainWindow):
         )
 
     def adicionar_filme(self):
+        if not self.carregamento_concluido:
+            return
+
         dialogo = DialogoFilme(self)
 
         if dialogo.exec():
             titulo, genero, ano = dialogo.obter_dados()
 
             filme = Filme(titulo, genero, ano)
-
             self.filmes.append(filme)
 
             self.salvar_filmes()
@@ -196,6 +242,9 @@ class JanelaPrincipal(QMainWindow):
         return None
 
     def alugar_filme(self):
+        if not self.carregamento_concluido:
+            return
+
         filme = self.obter_filme_selecionado()
 
         if filme is None:
@@ -236,6 +285,9 @@ class JanelaPrincipal(QMainWindow):
             )
 
     def devolver_filme(self):
+        if not self.carregamento_concluido:
+            return
+
         filme = self.obter_filme_selecionado()
 
         if filme is None:
@@ -275,6 +327,9 @@ class JanelaPrincipal(QMainWindow):
             )
 
     def remover_filme(self):
+        if not self.carregamento_concluido:
+            return
+
         filme = self.obter_filme_selecionado()
 
         if filme is None:
@@ -324,6 +379,8 @@ class JanelaPrincipal(QMainWindow):
         )
 
         if resposta == QMessageBox.Yes:
+            self.tarefas_arquivo.encerrar()
+            self.tarefas_arquivo.wait()
             evento.accept()
         else:
             evento.ignore()
