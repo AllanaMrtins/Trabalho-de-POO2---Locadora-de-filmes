@@ -11,13 +11,14 @@ from PySide6.QtWidgets import (
     QLineEdit
 )
 
+from PySide6.QtCore import Qt
 from PySide6.QtGui import QAction
 
 from modelos import Filme
 from dialogo_filme import DialogoFilme
 from dialogo_aluguel import DialogoAluguel
 from sobre import JanelaSobre
-from tarefas import GerenciadorArquivos
+from tarefas import GerenciadorAPI
 
 
 class JanelaPrincipal(QMainWindow):
@@ -26,7 +27,6 @@ class JanelaPrincipal(QMainWindow):
         super().__init__()
 
         self.filmes = []
-        self.arquivo = "filmes.json"
         self.carregamento_concluido = False
 
         self.setWindowTitle("Locadora de Filmes")
@@ -36,14 +36,13 @@ class JanelaPrincipal(QMainWindow):
         self.criar_menu()
         self.criar_barra_ferramentas()
 
-        self.tarefas_arquivo = GerenciadorArquivos()
-        self.tarefas_arquivo.resultado.connect(
-            self.tratar_resultado_arquivo
+        self.tarefas_api = GerenciadorAPI()
+        self.tarefas_api.resultado.connect(
+            self.tratar_resultado_api
         )
-        self.tarefas_arquivo.start()
+        self.tarefas_api.start()
 
-        self.statusBar().showMessage("Carregando filmes...")
-        self.tarefas_arquivo.carregar(self.arquivo)
+        self.recarregar_filmes()
 
     def criar_interface(self):
         widget_central = QWidget()
@@ -98,12 +97,15 @@ class JanelaPrincipal(QMainWindow):
         menu_arquivo = self.menuBar().addMenu("Arquivo")
 
         acao_adicionar = QAction("Adicionar filme", self)
+        acao_recarregar = QAction("Recarregar da API", self)
         acao_sair = QAction("Sair", self)
 
         acao_adicionar.triggered.connect(self.adicionar_filme)
+        acao_recarregar.triggered.connect(self.recarregar_filmes)
         acao_sair.triggered.connect(self.close)
 
         menu_arquivo.addAction(acao_adicionar)
+        menu_arquivo.addAction(acao_recarregar)
         menu_arquivo.addSeparator()
         menu_arquivo.addAction(acao_sair)
 
@@ -131,80 +133,77 @@ class JanelaPrincipal(QMainWindow):
     def criar_barra_ferramentas(self):
         self.addToolBar("Barra de ferramentas")
 
-    def carregar_filmes(self, dados):
-        self.filmes = []
+    def recarregar_filmes(self):
+        self.statusBar().showMessage("Carregando filmes da API...")
+        self.tarefas_api.carregar()
 
-        if dados is None:
-            self.filmes.append(
-                Filme("Interestelar", "Ficção", 2014)
-            )
-            self.filmes.append(
-                Filme("Toy Story", "Animação", 1995)
-            )
-            self.filmes.append(
-                Filme("O Poderoso Chefão", "Drama", 1972)
-            )
-            self.filmes.append(
-                Filme("Homem-Aranha", "Ação", 2002)
-            )
-
-            self.salvar_filmes()
-
-        else:
-            for dados_filme in dados:
-                filme = Filme.de_dicionario(dados_filme)
-                self.filmes.append(filme)
+    def carregar_filmes(self, registros):
+        self.filmes = [Filme.de_dicionario(r) for r in registros]
 
         self.carregamento_concluido = True
         self.atualizar_lista()
 
-        self.statusBar().showMessage(
-            "Filmes carregados com sucesso."
-        )
-
-    def salvar_filmes(self):
-        dados = []
-
-        for filme in self.filmes:
-            dados.append(filme.para_dicionario())
-
-        self.tarefas_arquivo.salvar(self.arquivo, dados)
-
-        self.statusBar().showMessage(
-            "Salvando alterações..."
-        )
-
-    def tratar_resultado_arquivo(self, operacao, dados, erro):
+    def tratar_resultado_api(self, operacao, dados, erro):
         if erro:
-            self.statusBar().showMessage(
-                "Erro ao acessar o arquivo."
-            )
+            self.statusBar().showMessage("Erro ao falar com a API.")
 
             QMessageBox.warning(
                 self,
-                "Erro no arquivo",
-                "Não foi possível concluir a operação.\n" + erro
+                "Erro de comunicação",
+                "Não foi possível concluir a operação.\n"
+                "Verifique se a API e o banco estão em execução "
+                "(docker compose up -d).\n\n" + erro
             )
+
+            # após um erro, sincroniza a lista com o que está no servidor
+            if self.carregamento_concluido and operacao != "carregar":
+                self.tarefas_api.carregar()
+
             return
 
         if operacao == "carregar":
             self.carregar_filmes(dados)
+            return
 
-        elif operacao == "salvar":
-            self.statusBar().showMessage(
-                "Alterações salvas.",
-                3000
+        mensagens = {
+            "inserir": ("Sucesso", "Filme adicionado com sucesso."),
+            "devolver": ("Devolução", "Filme devolvido com sucesso."),
+            "remover": ("Remoção", "Filme removido com sucesso."),
+        }
+
+        if operacao == "alugar":
+            QMessageBox.information(
+                self,
+                "Aluguel realizado",
+                f"Filme: {dados['titulo']}\n"
+                f"Cliente: {dados['cliente']}\n"
+                f"Dias: {dados['dias']}\n\n"
+                "Aluguel realizado com sucesso."
             )
+        else:
+            titulo, texto = mensagens[operacao]
+            QMessageBox.information(self, titulo, texto)
+
+        # recarrega para refletir o estado real do servidor
+        self.tarefas_api.carregar()
 
     def atualizar_lista(self):
-        self.lista_filmes.clear()
-
-        for filme in self.filmes:
-            self.lista_filmes.addItem(str(filme))
+        self.mostrar_filmes(self.campo_busca.text())
 
         self.statusBar().showMessage(
             f"{len(self.filmes)} filme(s) cadastrado(s)."
         )
+
+    def mostrar_filmes(self, texto=""):
+        texto = texto.lower()
+
+        self.lista_filmes.clear()
+
+        for filme in self.filmes:
+            if texto in filme.titulo.lower():
+                self.lista_filmes.addItem(str(filme))
+                item = self.lista_filmes.item(self.lista_filmes.count() - 1)
+                item.setData(Qt.UserRole, filme.id)
 
     def adicionar_filme(self):
         if not self.carregamento_concluido:
@@ -215,28 +214,20 @@ class JanelaPrincipal(QMainWindow):
         if dialogo.exec():
             titulo, genero, ano = dialogo.obter_dados()
 
-            filme = Filme(titulo, genero, ano)
-            self.filmes.append(filme)
-
-            self.salvar_filmes()
-            self.atualizar_lista()
-
-            QMessageBox.information(
-                self,
-                "Sucesso",
-                "Filme adicionado com sucesso."
+            self.tarefas_api.inserir(
+                {"titulo": titulo, "genero": genero, "ano": ano}
             )
 
     def obter_filme_selecionado(self):
-        indice = self.lista_filmes.currentRow()
+        item = self.lista_filmes.currentItem()
 
-        if indice < 0:
+        if item is None:
             return None
 
-        texto = self.lista_filmes.item(indice).text()
+        id_filme = item.data(Qt.UserRole)
 
         for filme in self.filmes:
-            if str(filme) == texto:
+            if filme.id == id_filme:
                 return filme
 
         return None
@@ -268,21 +259,7 @@ class JanelaPrincipal(QMainWindow):
         if dialogo.exec():
             cliente, dias = dialogo.obter_dados()
 
-            filme.disponivel = False
-            filme.cliente = cliente
-            filme.dias = dias
-
-            self.salvar_filmes()
-            self.atualizar_lista()
-
-            QMessageBox.information(
-                self,
-                "Aluguel realizado",
-                f"Filme: {filme.titulo}\n"
-                f"Cliente: {cliente}\n"
-                f"Dias: {dias}\n\n"
-                "Aluguel realizado com sucesso."
-            )
+            self.tarefas_api.alugar(filme.id, cliente, dias)
 
     def devolver_filme(self):
         if not self.carregamento_concluido:
@@ -313,18 +290,7 @@ class JanelaPrincipal(QMainWindow):
         )
 
         if resposta == QMessageBox.Yes:
-            filme.disponivel = True
-            filme.cliente = ""
-            filme.dias = 0
-
-            self.salvar_filmes()
-            self.atualizar_lista()
-
-            QMessageBox.information(
-                self,
-                "Devolução",
-                "Filme devolvido com sucesso."
-            )
+            self.tarefas_api.devolver(filme.id)
 
     def remover_filme(self):
         if not self.carregamento_concluido:
@@ -347,25 +313,10 @@ class JanelaPrincipal(QMainWindow):
         )
 
         if resposta == QMessageBox.Yes:
-            self.filmes.remove(filme)
-
-            self.salvar_filmes()
-            self.atualizar_lista()
-
-            QMessageBox.information(
-                self,
-                "Remoção",
-                "Filme removido com sucesso."
-            )
+            self.tarefas_api.remover(filme.id)
 
     def buscar_filme(self, texto):
-        texto = texto.lower()
-
-        self.lista_filmes.clear()
-
-        for filme in self.filmes:
-            if texto in filme.titulo.lower():
-                self.lista_filmes.addItem(str(filme))
+        self.mostrar_filmes(texto)
 
     def mostrar_sobre(self):
         janela = JanelaSobre(self)
@@ -379,8 +330,8 @@ class JanelaPrincipal(QMainWindow):
         )
 
         if resposta == QMessageBox.Yes:
-            self.tarefas_arquivo.encerrar()
-            self.tarefas_arquivo.wait()
+            self.tarefas_api.encerrar()
+            self.tarefas_api.wait()
             evento.accept()
         else:
             evento.ignore()

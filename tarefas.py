@@ -1,55 +1,73 @@
-
-import json
 from queue import Queue
 
 from PySide6.QtCore import QThread, Signal
 
+from cliente_api import ClienteAPI, ErroAPI
 
-class GerenciadorArquivos(QThread):
+
+class GerenciadorAPI(QThread):
+    """Thread que faz as requisições à API, uma de cada vez, em ordem.
+
+    A janela envia pedidos pela fila e recebe o resultado pelo sinal
+    `resultado(operacao, dados, erro)`. Assim a interface não trava
+    enquanto espera a resposta da rede.
+    """
+
     resultado = Signal(str, object, str)
 
     def __init__(self):
         super().__init__()
         self.fila = Queue()
 
-    def carregar(self, caminho):
-        self.fila.put(("carregar", caminho, None))
+    def carregar(self):
+        self.fila.put(("carregar", None))
 
-    def salvar(self, caminho, dados):
-        self.fila.put(("salvar", caminho, dados))
+    def inserir(self, dados):
+        self.fila.put(("inserir", dados))
+
+    def alugar(self, id_filme, cliente, dias):
+        self.fila.put(("alugar", (id_filme, cliente, dias)))
+
+    def devolver(self, id_filme):
+        self.fila.put(("devolver", id_filme))
+
+    def remover(self, id_filme):
+        self.fila.put(("remover", id_filme))
 
     def encerrar(self):
-        self.fila.put(("encerrar", None, None))
+        self.fila.put(("encerrar", None))
 
     def run(self):
+        cliente = ClienteAPI()
+
         while True:
-            operacao, caminho, dados = self.fila.get()
+            operacao, dados = self.fila.get()
 
             if operacao == "encerrar":
                 break
 
             try:
                 if operacao == "carregar":
-                    try:
-                        with open(caminho, "r", encoding="utf-8") as arquivo:
-                            dados = json.load(arquivo)
+                    saida = cliente.listar()
 
-                    except FileNotFoundError:
-                        dados = None
+                elif operacao == "inserir":
+                    saida = cliente.inserir(dados)
 
-                    self.resultado.emit("carregar", dados, "")
+                elif operacao == "alugar":
+                    saida = cliente.alugar(*dados)
 
-                elif operacao == "salvar":
-                    with open(caminho, "w", encoding="utf-8") as arquivo:
-                        json.dump(
-                            dados,
-                            arquivo,
-                            ensure_ascii=False,
-                            indent=4
-                        )
+                elif operacao == "devolver":
+                    saida = cliente.devolver(dados)
 
-                    self.resultado.emit("salvar", None, "")
+                elif operacao == "remover":
+                    saida = cliente.remover(dados)
 
-            except Exception as erro:
+                self.resultado.emit(operacao, saida, "")
+
+            except ErroAPI as erro:
                 self.resultado.emit(operacao, None, str(erro))
 
+            except Exception as erro:
+                self.resultado.emit(operacao, None, f"Erro inesperado: {erro}")
+
+        cliente.fechar()

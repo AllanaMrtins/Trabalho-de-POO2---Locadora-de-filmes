@@ -1,5 +1,6 @@
 class Filme:
-    def __init__(self, titulo, genero, ano):
+    def __init__(self, titulo, genero, ano, id=None):
+        self.id = id
         self.titulo = titulo
         self.genero = genero
         self.ano = ano
@@ -17,6 +18,7 @@ class Filme:
 
     def para_dicionario(self):
         return {
+            "id": self.id,
             "titulo": self.titulo,
             "genero": self.genero,
             "ano": self.ano,
@@ -30,7 +32,8 @@ class Filme:
         filme = cls(
             dados["titulo"],
             dados["genero"],
-            dados["ano"]
+            dados["ano"],
+            dados.get("id")
         )
 
         filme.disponivel = dados["disponivel"]
