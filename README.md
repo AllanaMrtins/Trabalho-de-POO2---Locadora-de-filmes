@@ -184,13 +184,6 @@ Tudo o que você fizer é salvo automaticamente no banco de dados.
 
 ---
 
-## 🔧 Melhorias futuras
-
-- Mostrar o cliente e os dias de aluguel na lista.
-- Cadastro de clientes e histórico de aluguéis.
-
----
-
 ## 👥 Equipe
 
 - **Allana Camily de Sousa Martins**
